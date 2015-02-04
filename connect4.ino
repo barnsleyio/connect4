@@ -36,7 +36,7 @@ void loop() {
   dropCounter(board, 'O', c - '0');
   displayBoard(board);
   
-  if (score(board, 'X', 'O') < -500) {
+  if (score(board, 'X', 'O') == -1000) {
     Serial.println();
     Serial.println ("****CONGRATULATIONS YOU WIN**** ");
     Serial.println();
@@ -53,7 +53,7 @@ void loop() {
     dropCounter(board, 'X', best);
     displayBoard(board);
     
-    if (score(board, 'X', 'O') > 500) {
+    if (score(board, 'X', 'O') == 1000) {
       Serial.println();
       Serial.println ("****COMISERATIONS YOU LOST****");
       Serial.println();
@@ -118,7 +118,11 @@ int score(char board[], char token, char oppToken) {
           else if (addScore == 0) addScore = 1;
           else if (addScore == 1) addScore = 10;
           else if (addScore == 10) addScore = 100;
-          else if (addScore == 100) addScore = 1000;
+          else if (addScore == 100) {
+            // The game has been won
+            totalScore = 1000;
+            goto gameWon;
+          }
         }
   
         if (board[j] == oppToken) {
@@ -130,7 +134,11 @@ int score(char board[], char token, char oppToken) {
           else if (addScore == 0) addScore = -1;
           else if (addScore == -1) addScore = -10;
           else if (addScore == -10) addScore = -100;
-          else if (addScore == -100) addScore = -1000;
+          else if (addScore == -100) {
+            // The game has been won
+            totalScore = -1000;
+            goto gameWon;
+          }
         }
         // Move to next position in group of 4
         j += lineStep;
@@ -141,42 +149,40 @@ int score(char board[], char token, char oppToken) {
       totalScore += addScore;
     }
   }
-  return totalScore;
+  gameWon: return totalScore;
 }
 
-int bestMove(char board[], char token, char oppToken, byte &best, byte lookAhead) {
+int bestMove(char board[], char token, char oppToken, byte &bestCol, byte lookAhead) {
   
   int bestScore = -9999;
-  byte best2;
   
   // Evaluate each choice of column
   for (byte col = 0; col < 7; col++) {
+    if (board[col] == '.') {
     
-    int thisScore;
-    
-    // Make a copy of the board
-    char boardCopy[43];
-    for (byte i = 0; i < 43; i++) boardCopy[i] = board[i];
-
-    // Drop token onto the copy of the board    
-    dropCounter(boardCopy, token, col);
-    
-    if (lookAhead == 0) 
-      // Don't look any more moves ahead, just evaluate the board as-is
-      thisScore = score(boardCopy, token, oppToken);
-    else {
-      // Look more moves ahead, but swap places with opponent since it will be their turn next
-      thisScore = -bestMove(boardCopy, oppToken, token, best2, lookAhead - 1);
-    }
+      int thisScore;
       
-    // Check this choice of column - best so far?
-    if (thisScore > bestScore) {
-      // Yes, a new best choice found
-      bestScore = thisScore;
-      best = col;
+      // Make a copy of the board
+      char boardCopy[43];
+      for (byte i = 0; i < 43; i++) boardCopy[i] = board[i];
+  
+      // Drop token onto the copy of the board   
+      dropCounter(boardCopy, token, col);
+      thisScore = score(boardCopy, token, oppToken);
+      
+      if (abs(thisScore) < 1000 && lookAhead > 0) {
+        // Look more moves ahead, but swap places with opponent since it will be their turn next
+        byte oppBestCol;
+        thisScore = -bestMove(boardCopy, oppToken, token, oppBestCol, lookAhead - 1);
+      }
+        
+      // Check this choice of column - best so far?
+      if (thisScore > bestScore) {
+        // Yes, a new best choice found
+        bestScore = thisScore;
+        bestCol = col;
+      }
     }
   }
   return bestScore;
 }
-
-
