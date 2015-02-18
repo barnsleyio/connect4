@@ -9,7 +9,7 @@ byte lineStart[] = { 0,  7, 14, 21, 28, 35,  0,  1,  2,  3,  4,  5,  6, 14,  7, 
 // Array containing number of groups of 4 positions on each "win line"
 byte lineReps[] =  { 4,  4,  4,  4,  4,  4,  3,  3,  3,  3,  3,  3,  3,  1,  2,  3,  3,  2,  1,  1,  2,  3,  3,  2,  1};
 // Array containing direction offset for each "win line"
-byte lineSteps[] = { 1,  1,  1,  1,  1,  1,  7,  7,  7,  7,  7,  7,  7,  7,  8,  8,  8,  8,  8,  6,  6,  6,  6,  6,  6};
+byte lineSteps[] = { 1,  1,  1,  1,  1,  1,  7,  7,  7,  7,  7,  7,  7,  8,  8,  8,  8,  8,  8,  6,  6,  6,  6,  6,  6};
 
 void setup() {
   Serial.begin(9600);
