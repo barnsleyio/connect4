@@ -47,7 +47,9 @@ void loop() {
     
     Serial.println();
     Serial.print("My go:");
+    unsigned long t = millis();
     currentScore = bestMove(board, 'X', 'O', best, 4);
+    Serial.println(millis() - t);
     Serial.println(best);
     Serial.println();
     dropCounter(board, 'X', best);
@@ -77,7 +79,7 @@ void displayBoard(char board[]) {
   }
 }
 
-void dropCounter(char board[], char token, byte col) {
+byte dropCounter(char board[], char token, byte col) {
   
   byte i = col;
   
@@ -88,6 +90,7 @@ void dropCounter(char board[], char token, byte col) {
   }
   // Place the token here
   board[i] = token;
+  return i;
 }
 
 int score(char board[], char token, char oppToken) {
@@ -99,9 +102,10 @@ int score(char board[], char token, char oppToken) {
     
     byte i = lineStart[line];
     byte lineStep = lineSteps[line];
+    byte reps = lineReps[line];
   
     // Scan each group of 4 positions on the "win" line
-    for (byte rep = 0; rep < lineReps[line]; rep++) {
+    for (byte rep = 0; rep < reps; rep++) {
       
       byte j = i;
       int addScore = 0;
@@ -124,8 +128,7 @@ int score(char board[], char token, char oppToken) {
             goto gameWon;
           }
         }
-  
-        if (board[j] == oppToken) {
+        else if (board[j] == oppToken) {
           if (addScore > 0) {
             // A mix of "O" and "X" - no-one can win here
             addScore = 0;
@@ -156,21 +159,19 @@ int bestMove(char board[], char token, char oppToken, byte &bestCol, byte lookAh
   
   int bestScore = -9999;
   
+  // Make a copy of the board
+  char boardCopy[43];
+  for (byte i = 0; i < 43; i++) boardCopy[i] = board[i];
+  
   // Evaluate each choice of column
   for (byte col = 0; col < 7; col++) {
     if (board[col] == '.') {
     
-      int thisScore;
-      
-      // Make a copy of the board
-      char boardCopy[43];
-      for (byte i = 0; i < 43; i++) boardCopy[i] = board[i];
-  
       // Drop token onto the copy of the board   
-      dropCounter(boardCopy, token, col);
-      thisScore = score(boardCopy, token, oppToken);
+      byte counterPosition = dropCounter(boardCopy, token, col);
+      int thisScore = score(boardCopy, token, oppToken);
       
-      if (abs(thisScore) < 1000 && lookAhead > 0) {
+      if (thisScore > -1000 && thisScore < 1000 && lookAhead > 0) {
         // Look more moves ahead, but swap places with opponent since it will be their turn next
         byte oppBestCol;
         thisScore = -bestMove(boardCopy, oppToken, token, oppBestCol, lookAhead - 1);
@@ -182,7 +183,14 @@ int bestMove(char board[], char token, char oppToken, byte &bestCol, byte lookAh
         bestScore = thisScore;
         bestCol = col;
       }
+      // remove the counter again
+      boardCopy[counterPosition] = '.';
     }
   }
   return bestScore;
 }
+
+
+
+
+
