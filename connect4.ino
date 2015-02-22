@@ -47,9 +47,9 @@ void loop() {
     
     Serial.println();
     Serial.print("My go:");
-    unsigned long t = millis();
+    //unsigned long t = millis();
     currentScore = bestMove(board, 'X', 'O', best, 4);
-    Serial.println(millis() - t);
+    //Serial.println(millis() - t);
     Serial.println(best);
     Serial.println();
     dropCounter(board, 'X', best);
