@@ -18,10 +18,18 @@ unsigned int btns = NO_BUTTONS;
 unsigned int lastBtns = NO_BUTTONS;
 unsigned int stableBtns = NO_BUTTONS;
 unsigned long debounce;
-char human = '-';
-char robot = '-';
-uint32_t humanColour = 0;
-uint32_t robotColour = 0;
+
+const byte human = 0;
+const byte robot = 1;
+const char token[2] = { 'O', 'X' };
+byte whosTurn = human;
+byte robotMove;
+
+const byte blue = 0;
+const byte yellow = 1;
+const uint32_t neoPixelColour[2] = { strip.Color(0,0,64), strip.Color(32,32,0) };
+byte playerColour[2] = {0, 0};
+
 char board[42];
 char screen[7][22];
 // Array containing start position of each "win line"
@@ -57,9 +65,9 @@ void setup() {
 
 void loop() {
   char c;
-  byte best;
   int currentScore;
   unsigned int btnsNow = 0;
+  
   // Read all buttons in the 7 cols x 2 rows matrix
   for (byte row=0; row<=1; row++) {
     for (byte col=0; col<=6; col++) {
@@ -89,32 +97,26 @@ void loop() {
       updateScreen();
     }
     else {
+      
       // Figure out which colour counter has been dropped
-      char counter;
-      if ((btns & 0b1111111) == col) counter = 'O'; 
-      else counter = 'X';
-      // Has human chosen a colour yet?
-      if (human == '-') {
-        // Human has now chosen a colour and robot chooses the other
-        human = counter;
-        if (human == 'X') {
-          humanColour = strip.Color(32, 32, 0);
-          robot = 'O'; 
-          robotColour = strip.Color(0, 0, 64);
-        }
-        else {
-          humanColour = strip.Color(0, 0, 64);
-          robot = 'X';
-          robotColour = strip.Color(32, 32, 0);
-        }
+      byte counter;
+      if ((btns & 0b1111111) == col) counter = blue; else counter = yellow;
+      
+      // Have player colours been chosen yet?
+      if (playerColour[human] == 0 && playerColour[robot] == 0) {
+        // Colours have now been chosen
+        playerColour[human] = counter;
+        playerColour[robot] = 1 - counter;
       }
-      // Has human played with robot's colour?
-      if (counter != human) {
+      
+      // Has the correct colour token been dropped?
+      if (counter != playerColour[whosTurn]) {
         strcpy(screen[0], "Cheat!");
         updateScreen();
       }
       else {
-        // Human has played correct colour. Figure out which column
+        
+        // The correct colour has bee dropped. Figure out which column
         for (byte i=0; i<=6; i++) {
           strip.setPixelColor(i, 0);
           if (bit(i) == col) {
@@ -122,48 +124,71 @@ void loop() {
           }
         }
         // Drop the counter
-        strip.setPixelColor(c, humanColour);
-        strip.show();
-        dropCounter(board, human, c);
+        dropCounter(board, token[whosTurn], c);
         displayBoard(board);
         updateScreen();
-        if (score(board, human, robot) == 1000) {
+        
+        // Has the game been won?
+        currentScore = score(board, 'O', 'X');
+        if (currentScore == 1000) {
           strcpy(screen[0], "You Won!");
           updateScreen();
-          while (true) {
-          }
+          while (true) {}
+        }
+        else if (currentScore == -1000) {
+          strcpy(screen[0], "You lost!");
+          updateScreen();
+          while (true) {}
         }
         else {
-          //unsigned long t = millis();
-          strcpy(screen[0], "My go:");
-          updateScreen();
-          currentScore = bestMove(board, robot, human, best, 4);
-          digitalWrite(LED, LOW);
-          //Serial.println(millis() - t);
-          for (byte i=0; i<=6; i++) {
-            strip.setPixelColor(i, 0);
-          }
-          strip.setPixelColor(best, robotColour);
-          strip.show();
-          dropCounter(board, robot, best);
-          displayBoard(board);
-          if (score(board, robot, human) == 1000) {
-            strcpy(screen[0], "You Lost!");
+          
+          // The game continues
+          if (whosTurn == human) {
+            
+            // Indicate the move the human made
+            strip.setPixelColor(c, neoPixelColour[playerColour[human]]);
+            strip.show();
+
+            // The robot takes a go
+            whosTurn = robot;
+            strcpy(screen[0], "My go:");
             updateScreen();
-            while (true) {
+            
+            // Robot decides its move
+            currentScore = bestMove(board, 'X', 'O', robotMove, 4);
+            digitalWrite(LED, LOW);
+            
+            // Robot indicates its chosen move and waits for counter to drop
+            strip.setPixelColor(robotMove, neoPixelColour[playerColour[robot]]);
+            strip.show();
+          }
+          else {
+            
+            // it is still the robot's go
+            // Has the counter been dropped into the robot's chosen column?
+            if (c != robotMove) {
+              strcpy(screen[0], "Cheat!");
+              updateScreen();
+            }
+            else {
+              // Clear the led indicating the robot's move
+              strip.setPixelColor(robotMove, 0);
+              strip.show();
+              
+              // Humans's turn
+              whosTurn = human;
+              strcpy(screen[0], "Your go:");
+              updateScreen();
             }
           }
-          strcpy(screen[0], "Your go:");
-          updateScreen();
         }
       }
-    }
     btns = NO_BUTTONS;
+    }
   }
 }
 
 void displayBoard(char board[]) {
-  Serial.println("0123456");
   byte i = 0;
   for(byte row = 0; row <= 5; row++) {
     for(byte col = 0; col <= 6; col++) {
