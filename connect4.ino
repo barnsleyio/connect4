@@ -27,8 +27,12 @@ byte robotMove;
 
 const byte blue = 0;
 const byte yellow = 1;
-const uint32_t neoPixelColour[2] = { strip.Color(0,0,64), strip.Color(32,32,0) };
+const byte red = 2;
+const uint32_t neoPixelColour[3] = { strip.Color(0,0,64), strip.Color(32,32,0), strip.Color(64,0,0) };
 byte playerColour[2] = {0, 0};
+unsigned long lastUpdate;
+byte animPos = 0;
+char animDir = 1;
 
 char board[42];
 char screen[7][22];
@@ -68,6 +72,29 @@ void loop() {
   int currentScore;
   unsigned int btnsNow = 0;
   
+  //Animate the leds while waiting for counter to drop
+  if (millis() - lastUpdate > 100) {
+    lastUpdate = millis();
+    uint32_t colour;
+    if (whosTurn == human) {
+      // switch off previously animated led
+      strip.setPixelColor(animPos, 0);
+      // move to next animation position
+      if (animDir == 1 && animPos == 6 || animDir == -1 && animPos == 0) animDir = - animDir;
+      animPos += animDir;
+      // Have player colours been chosen yet?
+      if (playerColour[human] == 0 && playerColour[robot] == 0)
+        // alternate colours
+        colour = neoPixelColour[animPos & 1];
+      else
+        // use player's chosen colour
+        colour = neoPixelColour[playerColour[whosTurn]];
+      // light the next led in the animation
+      strip.setPixelColor(animPos, colour);
+    }
+    strip.show();
+  }
+
   // Read all buttons in the 7 cols x 2 rows matrix
   for (byte row=0; row<=1; row++) {
     for (byte col=0; col<=6; col++) {
@@ -95,6 +122,7 @@ void loop() {
     if (col == 0) {
       strcpy(screen[0], "Cheat!");
       updateScreen();
+      gameOverAnimation(neoPixelColour[red]);
     }
     else {
       
@@ -113,6 +141,7 @@ void loop() {
       if (counter != playerColour[whosTurn]) {
         strcpy(screen[0], "Cheat!");
         updateScreen();
+        gameOverAnimation(neoPixelColour[red]);
       }
       else {
         
@@ -133,12 +162,12 @@ void loop() {
         if (currentScore == 1000) {
           strcpy(screen[0], "You Won!");
           updateScreen();
-          while (true) {}
+          gameOverAnimation(neoPixelColour[playerColour[human]]);
         }
         else if (currentScore == -1000) {
           strcpy(screen[0], "You lost!");
           updateScreen();
-          while (true) {}
+          gameOverAnimation(neoPixelColour[playerColour[robot]]);
         }
         else {
           
@@ -169,6 +198,7 @@ void loop() {
             if (c != robotMove) {
               strcpy(screen[0], "Cheat!");
               updateScreen();
+              gameOverAnimation(neoPixelColour[red]);
             }
             else {
               // Clear the led indicating the robot's move
@@ -310,8 +340,22 @@ int bestMove(char board[], char token, char oppToken, byte &bestCol, byte lookAh
       if (digitalRead(btnRow[0]) == LOW || digitalRead(btnRow[1]) == LOW) {
         strcpy(screen[0], "Cheat!");
         updateScreen();
+        gameOverAnimation(neoPixelColour[red]);
       }
     }
   }
   return bestScore;
 }
+
+void gameOverAnimation(uint32_t col) {
+  // Animation indicating who won
+  while (true) {
+    for (byte c=0; c <= 6; c++) strip.setPixelColor(c, 0);
+    strip.show();
+    delay(100);
+    for (byte c=0; c <= 6; c++) strip.setPixelColor(c, col);
+    strip.show();
+    delay(100);
+  }
+}
+
