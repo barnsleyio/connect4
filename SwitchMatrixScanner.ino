@@ -4,13 +4,16 @@
 // Pin mapping: Clockwise
 // PaulRB Jan 2017
 
-const byte rowPins[4] = {5, 4, 3, 2};
+const byte rowPins[4] = {5, 4, 3, 0};
 const byte colPins[4] = {10, 8, 9, 7};
 
-unsigned int switchData; // Holds all 16 switch states in binary, 0 = switch pressed
+unsigned int dataBuffer[8]; // Holds all 16 switch states in binary, 0 = switch pressed
+byte bufferStart = 0;
+byte bufferEnd = 7;
+
 
 void setup() {
-  Serial.begin(9600); // Outputs on pin 1
+  Serial.begin(57600); // TX on pin 1, RX on pin 0
   for (byte i = 0; i < 4; i++) {
     pinMode(rowPins[i], INPUT_PULLUP);
     pinMode(colPins[i], INPUT_PULLUP);
@@ -36,12 +39,26 @@ void loop() {
     // Disable the column again
     pinMode(colPins[j], INPUT_PULLUP);
   }
-
+  
   // Has the switch state data changed?
-  if (newSwitchData != switchData) {
-    switchData = newSwitchData;
-    // Send new switch state data as two bytes
-    Serial.print((char) lowByte(switchData));
-    Serial.print((char) highByte(switchData));
+  if (newSwitchData != dataBuffer[bufferEnd]) {
+    //Save it in the buffer
+    if (++bufferEnd > 7) bufferEnd = 0;
+    dataBuffer[bufferEnd] = newSwitchData;
+  }
+    
+  if (Serial.available() > 0) {
+    char c = Serial.read();
+    if (c == '?') {
+      delay(1);
+      // Send switch state data from the buffer as two bytes
+      Serial.print((char) lowByte(dataBuffer[bufferStart]));
+      Serial.print((char) highByte(dataBuffer[bufferStart]));
+      // Unless this is the only data in the buffer, move to the next data in the buffer
+      if (bufferStart != bufferEnd) {
+        if (++bufferStart > 7) bufferStart = 0;
+      }
+    }
   }
 }
+
