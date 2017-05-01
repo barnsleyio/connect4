@@ -1,11 +1,11 @@
 // 4x4 switch matrix scanner
-// for ATtiny84
+// for ATtiny84 @ 8MHz
 // Using core: https://github.com/SpenceKonde/ATTinyCore
-// Pin mapping: Clockwise
+// Pin mapping: Clockwise (non-"alternative")
 // PaulRB Jan 2017
 
 const byte rowPins[4] = {5, 4, 3, 0};
-const byte colPins[4] = {10, 8, 9, 7};
+const byte colPins[4] = {10, 9, 8, 7};
 
 unsigned int dataBuffer[8]; // Holds all 16 switch states in binary, 0 = switch pressed
 byte bufferStart = 0;
@@ -13,7 +13,7 @@ byte bufferEnd = 7;
 
 
 void setup() {
-  Serial.begin(57600); // TX on pin 1, RX on pin 0
+  Serial.begin(57600); // TX on pin 2 (AIN1), RX on pin 1 (AIN0)
   for (byte i = 0; i < 4; i++) {
     pinMode(rowPins[i], INPUT_PULLUP);
     pinMode(colPins[i], INPUT_PULLUP);
